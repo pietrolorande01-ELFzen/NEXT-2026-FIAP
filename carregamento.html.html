@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumos — Carregamento</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--verde:#3ecf74;--ve:#1a9e50;--vc:#d4f5e2;--am:#f59e0b;--vm:#ef4444;--ps:#1a202c;--fd:'Inter',sans-serif;--fb:'Inter',sans-serif;--flogo:'Syne',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{min-height:100vh;font-family:var(--fb);background:var(--ps);color:#fff;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(15,25,20,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(62,207,116,.15);padding:0 5vw;display:flex;align-items:center;justify-content:space-between;height:60px}
+.nav-logo{font-family:var(--flogo);font-weight:800;font-size:1.2rem;color:#fff;text-decoration:none}
+.nav-logo span{color:var(--verde)}
+.nav-back{background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);padding:7px 16px;border-radius:50px;font-family:var(--fb);font-size:.82rem;cursor:pointer;transition:all .2s}
+.nav-back:hover{border-color:var(--verde);color:var(--verde)}
+/* SCREENS */
+.screen{display:none;min-height:100vh;padding:80px 5vw 40px;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.screen.active{display:flex;animation:scIn .45s ease}
+@keyframes scIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+/* STEP INDICATOR */
+.step-bar{display:flex;align-items:center;gap:.4rem;margin-bottom:2rem}
+.sb-dot{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:rgba(255,255,255,.3);transition:all .3s}
+.sb-dot.done{background:var(--ve);border-color:var(--ve);color:#fff}
+.sb-dot.active{border-color:var(--verde);color:var(--verde)}
+.sb-line{width:32px;height:2px;background:rgba(255,255,255,.1);border-radius:2px}
+/* SCREEN 1 - PAYMENT */
+.sc-title{font-family:var(--fd);font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:.5rem}
+.sc-sub{color:rgba(255,255,255,.5);font-size:1rem;margin-bottom:2.5rem;max-width:500px}
+.pay-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;max-width:680px;width:100%;margin-bottom:1.5rem}
+.pg-card{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:18px;padding:1.5rem 1rem;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.pg-card:hover{border-color:var(--verde);background:rgba(62,207,116,.08);transform:translateY(-3px)}
+.pg-card.selected{border-color:var(--verde);background:rgba(62,207,116,.1)}
+.pg-card .pi{font-size:2rem;display:block;margin-bottom:.5rem}
+.pg-card h4{font-family:var(--fd);font-size:.9rem;font-weight:700;margin-bottom:.2rem}
+.pg-card p{font-size:.72rem;color:rgba(255,255,255,.45)}
+.pg-shine{position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);transform:skewX(-20deg);transition:left .5s;pointer-events:none}
+.pg-card:hover .pg-shine{left:130%}
+.btn-go{background:var(--ve);color:#fff;border:none;padding:14px 44px;border-radius:50px;font-family:var(--fb);font-size:1rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s,background .2s;box-shadow:0 6px 24px rgba(26,158,80,.3)}
+.btn-go:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(26,158,80,.4);background:var(--verde)}
+.btn-go:disabled{background:#2d3d2d;color:rgba(255,255,255,.25);box-shadow:none;cursor:not-allowed;transform:none}
+/* SCREEN 2 - PROCESSING */
+.pay-anim-area{min-height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:1rem}
+.proc-spinner{width:56px;height:56px;border-radius:50%;border:4px solid rgba(62,207,116,.2);border-top-color:var(--ve);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.proc-title{font-family:var(--fd);font-size:1.6rem;font-weight:800;margin-bottom:.4rem}
+.proc-sub{color:rgba(255,255,255,.45);font-size:.9rem;margin-bottom:1.2rem}
+.pbar-wrap{width:300px;margin-bottom:1.2rem}
+.pbar-track{height:5px;background:rgba(255,255,255,.1);border-radius:50px;overflow:hidden}
+.pbar-fill{height:100%;background:linear-gradient(90deg,var(--ve),var(--verde));border-radius:50px;width:0;transition:width linear}
+.proc-steps{display:flex;flex-direction:column;gap:.55rem;text-align:left;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:1rem 1.4rem;max-width:340px;width:100%}
+.ps-row{display:flex;align-items:center;gap:.65rem;font-size:.83rem;color:rgba(255,255,255,.35);transition:color .3s}
+.ps-row.done{color:rgba(255,255,255,.85)}
+.ps-row.cur{color:#fff}
+.ps-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.15);flex-shrink:0;transition:background .3s}
+.ps-row.done .ps-dot{background:var(--verde)}
+.ps-row.cur .ps-dot{background:var(--am);animation:blinkDot 1s infinite}
+@keyframes blinkDot{0%,100%{opacity:1}50%{opacity:.2}}
+/* PIX anim */
+.pix-qr-box{width:110px;height:110px;border-radius:10px;background:rgba(255,255,255,.07);display:inline-flex;align-items:center;justify-content:center;font-size:3rem;border:2px dashed rgba(255,255,255,.18);animation:qPulse 1.4s ease-in-out infinite}
+@keyframes qPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.pix-scan{width:110px;height:3px;background:var(--verde);border-radius:2px;margin:5px auto 0;animation:sc 1.8s ease-in-out infinite}
+@keyframes sc{0%{margin-top:0}50%{margin-top:95px}100%{margin-top:0}}
+/* Card anim */
+.card3d-scene{perspective:700px;width:260px;margin:0 auto}
+.card3d{width:260px;height:155px;border-radius:16px;background:linear-gradient(135deg,var(--ve),#0d6b40);color:#fff;padding:1.2rem;transform-style:preserve-3d;animation:c3d 3s ease-in-out infinite;display:flex;flex-direction:column;justify-content:space-between;position:relative}
+@keyframes c3d{0%{transform:rotateY(-13deg) rotateX(4deg)}50%{transform:rotateY(13deg) rotateX(-4deg)}100%{transform:rotateY(-13deg) rotateX(4deg)}}
+.chip-sm{width:32px;height:22px;background:#fbbf24;border-radius:4px}
+.nfc-wrap{position:absolute;top:10px;right:12px}
+.nfc-r{position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.65);animation:nfcP 1.3s ease-out infinite}
+.nfc-r:nth-child(1){width:20px;height:20px;top:-10px;left:-10px}
+.nfc-r:nth-child(2){width:32px;height:32px;top:-16px;left:-16px;animation-delay:.35s}
+@keyframes nfcP{0%{transform:scale(.4);opacity:1}100%{transform:scale(2);opacity:0}}
+/* TAG anim */
+.tag-box{display:inline-block;position:relative;padding:1.5rem}
+.tag-w{position:absolute;inset:0;border-radius:50%;border:2px solid var(--verde);opacity:0;animation:tagW 1.8s ease-out infinite}
+.tag-w:nth-child(2){animation-delay:.4s}.tag-w:nth-child(3){animation-delay:.8s}
+@keyframes tagW{0%{transform:scale(.4);opacity:.8}100%{transform:scale(2.5);opacity:0}}
+/* BOLETO */
+.bol-bars{display:flex;gap:2px;align-items:flex-end;height:50px;justify-content:center}
+.bb{background:#fff;border-radius:2px;animation:bG .6s ease both}
+@keyframes bG{from{height:0}}
+/* SCREEN 3 - CONNECT */
+.conn-ring-wrap{position:relative;width:130px;height:130px;display:flex;align-items:center;justify-content:center;margin-bottom:1rem}
+.cr{position:absolute;border-radius:50%;border:2px solid rgba(62,207,116,.3);animation:cr 2s ease-out infinite}
+.cr:nth-child(1){width:100%;height:100%}
+.cr:nth-child(2){width:78%;height:78%;animation-delay:.35s}
+.cr:nth-child(3){width:56%;height:56%;animation-delay:.7s}
+@keyframes cr{0%{transform:scale(.6);opacity:.8}100%{transform:scale(1.3);opacity:0}}
+.plug-icon{font-size:3.8rem;z-index:1;animation:plugB 1.6s ease-in-out infinite}
+@keyframes plugB{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.conn-badge{display:flex;align-items:center;gap:9px;padding:9px 20px;border-radius:50px;font-size:.88rem;font-weight:600;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.08);color:var(--am);margin:1rem 0}
+.conn-badge.ok{border-color:rgba(62,207,116,.35);background:rgba(62,207,116,.08);color:var(--verde)}
+.badge-dot{width:9px;height:9px;border-radius:50%;background:var(--am);animation:blinkDot 1.2s infinite}
+.conn-badge.ok .badge-dot{background:var(--verde);animation:none}
+.btn-sim{background:transparent;border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.55);padding:10px 24px;border-radius:50px;font-family:var(--fb);font-size:.88rem;cursor:pointer;transition:all .2s;margin-top:.5rem}
+.btn-sim:hover{border-color:var(--verde);color:var(--verde)}
+/* SCREEN 4 - CHARGING */
+#sc-charge{padding-top:80px;gap:1.2rem}
+.charge-top{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:900px}
+.ct-title{font-family:var(--fd);font-size:1.25rem;font-weight:800}
+.ct-badge{display:flex;align-items:center;gap:7px;background:rgba(62,207,116,.1);border:1px solid rgba(62,207,116,.25);border-radius:50px;padding:6px 14px;font-size:.8rem;font-weight:600;color:var(--verde)}
+.charge-body{display:grid;grid-template-columns:1fr 1.1fr;gap:2rem;width:100%;max-width:900px;text-align:left}
+/* Gauge */
+.gauge-area{display:flex;flex-direction:column;align-items:center;gap:.9rem}
+.gauge-svg-wrap{position:relative;width:210px;height:210px}
+svg.gauge-svg{transform:rotate(-90deg)}
+.g-bg{fill:none;stroke:rgba(255,255,255,.07);stroke-width:14}
+.g-fill{fill:none;stroke-width:14;stroke-linecap:round;stroke:var(--verde);transition:stroke-dashoffset .9s ease;filter:drop-shadow(0 0 8px rgba(62,207,116,.5))}
+.gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.g-pct{font-family:var(--fd);font-size:2.6rem;font-weight:800}
+.g-label{font-size:.74rem;color:rgba(255,255,255,.45)}
+.g-kwh{font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--verde)}
+.timer{font-family:var(--fd);font-size:2rem;font-weight:800;color:var(--am);letter-spacing:.04em}
+.timer-lbl{font-size:.74rem;color:rgba(255,255,255,.35);margin-top:-.4rem}
+/* Spec */
+.spec-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:1.4rem}
+.spec-box h3{font-family:var(--fd);font-size:.82rem;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.9rem}
+.spec-r{display:flex;justify-content:space-between;align-items:center;padding:.65rem 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.spec-r:last-child{border-bottom:none}
+.sk{font-size:.8rem;color:rgba(255,255,255,.4)}
+.sv{font-size:.88rem;font-weight:600}
+.sv.green{color:var(--verde)}.sv.amber{color:var(--am)}.sv.red{color:var(--vm)}
+.est-card{margin-top:1.2rem}
+.conn-msg-warn{color:var(--am)}
+/* Log */
+.live-log{width:100%;max-width:900px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:.9rem 1.2rem;max-height:130px;overflow-y:auto;font-family:monospace;font-size:.72rem;color:rgba(255,255,255,.45);line-height:1.9;text-align:left}
+.ll{animation:llIn .35s ease}
+@keyframes llIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1}}
+.ll.green{color:var(--verde)}.ll.amber{color:var(--am)}
+/* SCREEN 5 - DONE */
+.done-circle{width:96px;height:96px;border-radius:50%;background:var(--ve);display:flex;align-items:center;justify-content:center;animation:donePop .55s cubic-bezier(.34,1.56,.64,1)}
+@keyframes donePop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.done-check{stroke-dasharray:70;stroke-dashoffset:70;animation:drawCk .5s .4s ease forwards}
+@keyframes drawCk{to{stroke-dashoffset:0}}
+.done-title{font-family:var(--fd);font-size:2.4rem;font-weight:800}
+.done-msg{color:rgba(255,255,255,.5);max-width:420px;line-height:1.7;font-size:.95rem}
+.done-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:1.4rem;max-width:680px;width:100%}
+.dg-item{text-align:center}
+.dg-v{font-family:var(--fd);font-size:1.25rem;font-weight:800;color:var(--verde)}
+.dg-l{font-size:.7rem;color:rgba(255,255,255,.35);margin-top:3px}
+.done-btns{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
+.btn-home{background:var(--ve);color:#fff;border:none;padding:13px 32px;border-radius:50px;font-family:var(--fb);font-size:.95rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 6px 24px rgba(26,158,80,.3)}
+.btn-home:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(26,158,80,.4)}
+.btn-new{background:transparent;color:rgba(255,255,255,.65);border:1.5px solid rgba(255,255,255,.18);padding:12px 28px;border-radius:50px;font-family:var(--fb);font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-new:hover{border-color:var(--verde);color:var(--verde)}
+.nav-corp-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(26,158,80,.1);
+  border:1.5px solid rgba(26,158,80,.3);
+  color:var(--ve);
+  padding:5px 13px;border-radius:50px;
+  font-family:var(--fb);font-size:.78rem;font-weight:700;
+  text-decoration:none;cursor:pointer;
+  transition:background .2s,border-color .2s,transform .15s;
+  letter-spacing:.02em;
+}
+.nav-corp-btn:hover{
+  background:rgba(26,158,80,.18);
+  border-color:rgba(26,158,80,.55);
+  transform:translateY(-1px);
+}
+.nav-corp-btn .corp-dot{
+  font-size:.55rem;letter-spacing:.06em;
+  background:var(--ve);color:#fff;
+  padding:1px 5px;border-radius:50px;
+  font-weight:800;
+}
+/* CONFETTI */
+.conf-layer{position:fixed;inset:0;pointer-events:none;z-index:9999}
+.cp{position:absolute;animation:cpFall var(--d,2s) var(--del,0s) ease both}
+@keyframes cpFall{0%{transform:translateY(-30px) rotate(0);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+@media(max-width:760px){.pay-grid{grid-template-columns:1fr 1fr}.charge-body{grid-template-columns:1fr}.done-grid{grid-template-columns:1fr 1fr}}
+/* CONFIG ESP32 */
+.esp-fab{position:fixed;bottom:18px;right:18px;z-index:200;width:46px;height:46px;border-radius:50%;background:rgba(15,25,20,.92);border:1.5px solid rgba(62,207,116,.35);color:var(--verde);font-size:1.2rem;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35);transition:transform .2s,border-color .2s}
+.esp-fab:hover{transform:translateY(-2px);border-color:var(--verde)}
+.esp-fab.needs-config{animation:espPulse 1.6s infinite}
+@keyframes espPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}
+.esp-panel{position:fixed;bottom:76px;right:18px;z-index:200;width:min(300px,88vw);background:rgba(15,25,20,.97);border:1px solid rgba(62,207,116,.25);border-radius:16px;padding:1.1rem;display:none;box-shadow:0 12px 32px rgba(0,0,0,.45)}
+.esp-panel.open{display:block}
+.esp-panel h4{font-family:var(--fd);font-size:.9rem;font-weight:700;margin-bottom:.3rem}
+.esp-panel p{font-size:.74rem;color:rgba(255,255,255,.5);margin-bottom:.7rem;line-height:1.5}
+.esp-panel input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:9px 10px;color:#fff;font-size:.85rem;font-family:monospace;margin-bottom:.6rem}
+.esp-panel input:focus{outline:none;border-color:var(--verde)}
+.esp-panel-btns{display:flex;gap:.5rem}
+.esp-panel-btns button{flex:1;border:none;border-radius:8px;padding:8px 10px;font-family:var(--fb);font-size:.8rem;font-weight:700;cursor:pointer;transition:filter .2s}
+.esp-btn-save{background:var(--ve);color:#fff}
+.esp-btn-save:hover{filter:brightness(1.15)}
+.esp-btn-close{background:rgba(255,255,255,.08);color:rgba(255,255,255,.7)}
+.esp-btn-close:hover{filter:brightness(1.3)}
+.esp-status-line{font-size:.74rem;margin-top:.6rem;padding-top:.6rem;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="home.html"><span>Lumos</span></a>
+  <button class="nav-back" onclick="goBack()">← Voltar</button>
+  <a class="nav-corp-btn" href="corp.html"><span class="corp-dot">CORP</span> Lumos Corp</a>
+</nav>
+
+<!-- STEP BAR (shared) -->
+<div style="position:fixed;top:60px;left:0;right:0;z-index:99;background:rgba(15,25,20,.85);border-bottom:1px solid rgba(255,255,255,.06);padding:.6rem 0;display:flex;justify-content:center">
+  <div class="step-bar" id="step-bar">
+    <div class="sb-dot active" id="sd1">1</div>
+    <div class="sb-line"></div>
+    <div class="sb-dot" id="sd2">2</div>
+    <div class="sb-line"></div>
+    <div class="sb-dot" id="sd3">3</div>
+    <div class="sb-line"></div>
+    <div class="sb-dot" id="sd4">4</div>
+  </div>
+</div>
+
+<!-- SCREEN 1: PAYMENT -->
+<div class="screen active" id="sc-pay">
+  <h1 class="sc-title">Escolha o pagamento</h1>
+  <p class="sc-sub">Selecione como deseja pagar sua sessão de recarga.</p>
+  <div class="pay-grid">
+    <div class="pg-card" onclick="selectPay('creditos',this)"><div class="pg-shine"></div><span class="pi">⚡</span><h4>Créditos Lumos</h4><p>Saldo: <strong id="saldo-disp" style="color:var(--verde)">R$ 0,00</strong></p></div>
+    <div class="pg-card" onclick="selectPay('pix',this)"><div class="pg-shine"></div><span class="pi">🏦</span><h4>PIX</h4><p>~5 segundos</p></div>
+    <div class="pg-card" onclick="selectPay('cartao',this)"><div class="pg-shine"></div><span class="pi">💳</span><h4>Cartão NFC</h4><p>~4 segundos</p></div>
+    <div class="pg-card" onclick="selectPay('boleto',this)"><div class="pg-shine"></div><span class="pi">📄</span><h4>Boleto</h4><p>~7 segundos</p></div>
+    <div class="pg-card" onclick="selectPay('tag',this)"><div class="pg-shine"></div><span class="pi">📡</span><h4>TAG Sem Parar</h4><p>~3 segundos</p></div>
+  </div>
+  <button class="btn-go" id="btn-continuar" disabled onclick="startProcessing()">Continuar →</button>
+</div>
+
+<!-- SCREEN 2: PROCESSING -->
+<div class="screen" id="sc-proc">
+  <div class="pay-anim-area" id="anim-area"></div>
+  <div class="proc-title" id="proc-title">Processando...</div>
+  <div class="proc-sub" id="proc-sub">Aguarde</div>
+  <div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" id="pbar"></div></div></div>
+  <div class="proc-steps" id="proc-steps"></div>
+</div>
+
+<!-- SCREEN 3: CONNECT -->
+<div class="screen" id="sc-connect">
+  <div class="conn-ring-wrap">
+    <div class="cr"></div><div class="cr"></div><div class="cr"></div>
+    <div class="plug-icon" id="plug-icon">🔌</div>
+  </div>
+  <h2 style="font-family:var(--fd);font-size:1.8rem;font-weight:800;margin-bottom:.3rem">Pagamento confirmado!</h2>
+  <h2 style="font-family:var(--fd);font-size:1.8rem;font-weight:800;color:var(--verde);margin-bottom:1rem">Conecte seu veículo</h2>
+  <p style="color:rgba(255,255,255,.5);max-width:420px;line-height:1.7;margin-bottom:1.2rem" id="conn-msg">O carregador está pronto. Por favor, conecte o cabo ao veículo para iniciar a recarga.</p>
+  <div class="conn-badge" id="conn-badge"><div class="badge-dot"></div>Aguardando conexão do veículo...</div>
+  <button class="btn-sim" onclick="simulateConnect()">Simular conexão do veículo</button>
+</div>
+
+<!-- SCREEN 4: CHARGING -->
+<div class="screen" id="sc-charge">
+  <div class="charge-top">
+    <div class="ct-title">⚡ Recarga em andamento</div>
+    <div class="ct-badge" id="ct-badge">🟢 Bandeira Verde · Solar</div>
+  </div>
+  <div class="charge-body">
+    <div class="gauge-area">
+      <div class="gauge-svg-wrap">
+        <svg class="gauge-svg" width="210" height="210" viewBox="0 0 210 210">
+          <circle class="g-bg" cx="105" cy="105" r="88"/>
+          <circle class="g-fill" id="g-fill" cx="105" cy="105" r="88" stroke-dasharray="553" stroke-dashoffset="553"/>
+        </svg>
+        <div class="gauge-center">
+          <div class="g-pct" id="g-pct">0%</div>
+          <div class="g-label">bateria</div>
+        </div>
+      </div>
+      <div class="g-kwh" id="g-kwh">0.0 kWh adicionados</div>
+      <div class="timer-lbl">Tempo restante estimado</div>
+      <div class="timer" id="g-timer">--:--</div>
+    </div>
+    <div class="spec-box">
+      <h3>Ficha técnica</h3>
+      <div class="spec-r"><span class="sk">Veículo</span><span class="sv" id="sp-veiculo">—</span></div>
+      <div class="spec-r"><span class="sk">Bateria inicial</span><span class="sv" id="sp-ini">—</span></div>
+      <div class="spec-r"><span class="sk">Bateria atual</span><span class="sv green" id="sp-cur">—</span></div>
+      <div class="spec-r"><span class="sk">Potência</span><span class="sv green">11 kW (AC)</span></div>
+      <div class="spec-r"><span class="sk">Fonte</span><span class="sv green">Solar + Lynx</span></div>
+      <div class="spec-r"><span class="sk">Bandeira</span><span class="sv green" id="sp-bandeira">🟢 Verde</span></div>
+      <div class="spec-r"><span class="sk">Tarifa</span><span class="sv" id="sp-tarifa">R$ 0,85/kWh</span></div>
+      <div class="spec-r"><span class="sk">Custo atual</span><span class="sv amber" id="sp-custo">R$ 0,00</span></div>
+      <div class="spec-r"><span class="sk">CO₂ evitado</span><span class="sv green" id="sp-co2">0,00 kg</span></div>
+      <div class="spec-r"><span class="sk">Início</span><span class="sv" id="sp-inicio">—</span></div>
+    </div>
+  </div>
+  <div class="spec-box est-card" style="max-width:900px;width:100%">
+    <h3>⚡ Estação Lumos (ESP32)</h3>
+    <div class="spec-r"><span class="sk">☀️ Geração solar</span><span class="sv green" id="est-solar">--%</span></div>
+    <div class="spec-r"><span class="sk">🔋 Bateria Lynx</span><span class="sv" id="est-lynx">--%</span></div>
+    <div class="spec-r"><span class="sk">🌙 Desconto noturno</span><span class="sv" id="est-noturno">--</span></div>
+    <div class="spec-r"><span class="sk">Status da estação</span><span class="sv" id="estacao-status-txt">--</span></div>
+  </div>
+  <div class="live-log" id="live-log"></div>
+</div>
+
+<!-- SCREEN 5: DONE -->
+<div class="screen" id="sc-done">
+  <div class="done-circle">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <path class="done-check" d="M10 24l10 10 18-18" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="done-title">Recarga concluída!</div>
+  <p class="done-msg">Obrigado, <strong id="done-nome">usuário</strong>! Cada kWh solar é um passo rumo ao futuro. 🌱</p>
+  <div class="done-grid">
+    <div class="dg-item"><div class="dg-v" id="ds-kwh">—</div><div class="dg-l">kWh adicionados</div></div>
+    <div class="dg-item"><div class="dg-v" id="ds-time">—</div><div class="dg-l">Duração</div></div>
+    <div class="dg-item"><div class="dg-v" id="ds-custo">—</div><div class="dg-l">Valor pago</div></div>
+    <div class="dg-item"><div class="dg-v" id="ds-co2">—</div><div class="dg-l">CO₂ evitado</div></div>
+  </div>
+  <div class="done-btns">
+    <button class="btn-home" onclick="window.location.href='home.html'">🏠 Voltar ao Menu</button>
+    <button class="btn-new" onclick="window.location.href='carregamento.html'">⚡ Nova Recarga</button>
+  </div>
+</div>
+
+<!-- WIDGET: CONFIGURAÇÃO DO IP DO ESP32 -->
+<button class="esp-fab" id="esp-fab" onclick="toggleEspPanel()" title="Configurar IP da estação">⚙️</button>
+<div class="esp-panel" id="esp-panel">
+  <h4>📡 Estação ESP32</h4>
+  <p>O IP do ESP32 muda conforme a rede Wi-Fi. Digite o IP atual mostrado no display/serial da estação (ex: 192.168.0.42).</p>
+  <input type="text" id="esp-ip-input" placeholder="192.168.0.42" autocomplete="off" spellcheck="false">
+  <div class="esp-panel-btns">
+    <button class="esp-btn-save" onclick="salvarIpEsp32()">Salvar</button>
+    <button class="esp-btn-close" onclick="toggleEspPanel(false)">Fechar</button>
+  </div>
+  <div class="esp-status-line" id="esp-status-line">—</div>
+</div>
+
+<script>
+// ===================== AUTH =====================
+var _user = null;
+try { _user = JSON.parse(localStorage.getItem('lm_user')); } catch(e) {}
+if (!_user || !_user.nome) {
+  window.location.href = 'index.html';
+}
+
+// ===================== INIT (only if user ok) =====================
+if (_user && _user.nome) {
+  var _credits = parseFloat(localStorage.getItem('lm_credits') || '0');
+  document.getElementById('saldo-disp').textContent = 'R$ ' + _credits.toFixed(2);
+  document.getElementById('done-nome').textContent = _user.nome.split(' ')[0];
+}
+
+// ===================== CONFIG DA ESTAÇÃO (ESP32) =====================
+// O IP do ESP32 muda a cada rede Wi-Fi que ele conecta, então não fica mais
+// fixo no código: o usuário informa o IP atual pelo botão ⚙️ e ele fica
+// salvo no navegador (localStorage), evitando que a página quebre para
+// quem abre o arquivo em outra rede/dispositivo.
+var ESP32 = null; // será preenchido por carregarIpEsp32()
+
+function normalizarIpEsp32(valor) {
+  if (!valor) return null;
+  valor = valor.trim();
+  if (!valor) return null;
+  // Remove protocolo/barra final que o usuário eventualmente digite
+  valor = valor.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  if (!valor) return null;
+  return 'http://' + valor;
+}
+
+function carregarIpEsp32() {
+  var salvo = null;
+  try { salvo = localStorage.getItem('lm_esp32_ip'); } catch (e) {}
+  ESP32 = normalizarIpEsp32(salvo);
+  var input = document.getElementById('esp-ip-input');
+  if (input && salvo) input.value = salvo.replace(/^https?:\/\//i, '');
+  atualizarEspFab();
+}
+
+function atualizarEspFab() {
+  var fab = document.getElementById('esp-fab');
+  if (!fab) return;
+  fab.classList.toggle('needs-config', !ESP32);
+}
+
+function toggleEspPanel(forcar) {
+  var painel = document.getElementById('esp-panel');
+  if (!painel) return;
+  var abrir = (typeof forcar === 'boolean') ? forcar : !painel.classList.contains('open');
+  painel.classList.toggle('open', abrir);
+}
+
+function salvarIpEsp32() {
+  var input = document.getElementById('esp-ip-input');
+  var statusEl = document.getElementById('esp-status-line');
+  if (!input) return;
+  var normalizado = normalizarIpEsp32(input.value);
+  if (!normalizado) {
+    if (statusEl) statusEl.textContent = '⚠️ Digite um IP válido (ex: 192.168.0.42)';
+    return;
+  }
+  try { localStorage.setItem('lm_esp32_ip', normalizado); } catch (e) {}
+  ESP32 = normalizado;
+  atualizarEspFab();
+  if (statusEl) statusEl.textContent = '🔄 Testando conexão...';
+  buscarEstacao();
+}
+
+var MARGEM_MINUTOS = 20;
+var TARIFA_BASE = 2.00;
+var TARIFA_VERDE = 0.85;
+var TARIFA_AMARELA = 1.20;
+var TARIFA_VERMELHA = 1.60;
+var DESCONTO_NOTURNO = 0.20;
+var CO2_POR_KWH = 0.21; // kg de CO2 evitado por kWh
+
+// Capacidades aproximadas dos veículos (kWh) — apenas para a simulação
+var CAPACIDADES_VEICULO = {
+  'BYD Dolphin': 45,
+  'Tesla Model 3': 60,
+  'Volvo XC40': 78,
+  'BMW iX3': 80,
+  'Renault Kwid E-Tech': 27
+};
+
+// ===================== STATE =====================
+var _payMethod = null;
+var _screens = ['sc-pay','sc-proc','sc-connect','sc-charge','sc-done'];
+var _curScreen = 0;
+
+// Bateria real do celular (Battery API)
+var batteryManager = null;
+var bateriaSuportada = false;
+var percentualAtual = null;
+
+// Dados da estação (ESP32)
+var dadosEstacao = null;
+
+// Sessão de recarga real
+var sessaoIniciada = false;
+var horarioInicio = null;
+var percentualInicial = null;
+var capacidadeVeiculo = 45;
+var historicoSessao = []; // {timestamp, pct, bandeira, noturno}
+var ultimoPctRegistrado = null;
+var chargeKwhTotal = 0;
+var custoTotalSessao = 0;
+var _timerInterval = null;
+
+// Modo simulado (apenas se o navegador não suportar Battery API)
+var modoFallback = false;
+var _fbInterval = null;
+
+// ===================== HELPERS =====================
+function goBack() {
+  if (confirm('Cancelar e voltar?')) window.location.href = 'home.html';
+}
+
+function showScreen(id) {
+  _screens.forEach(function(s) { document.getElementById(s).classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  // update step dots
+  var idx = _screens.indexOf(id);
+  for (var i = 1; i <= 4; i++) {
+    var dot = document.getElementById('sd'+i);
+    if (!dot) continue;
+    dot.classList.remove('active','done');
+    if (i < idx+1) dot.classList.add('done');
+    else if (i === idx+1) dot.classList.add('active');
+  }
+}
+
+function addLog(cls, msg) {
+  var log = document.getElementById('live-log');
+  if (!log) return;
+  var line = document.createElement('div');
+  line.className = 'll' + (cls ? ' '+cls : '');
+  line.textContent = msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function timeStr() {
+  return new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// ===================== STEP 1: SELECT PAY =====================
+function selectPay(method, btn) {
+  document.querySelectorAll('.pg-card').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  _payMethod = method;
+  document.getElementById('btn-continuar').disabled = false;
+}
+
+// ===================== STEP 2: PROCESSING =====================
+var _payMeta = {
+  creditos: { title:'Verificando créditos...', dur:1200, steps:['Verificar saldo','Debitar créditos','Confirmado!'] },
+  pix:      { title:'Aguardando PIX...', dur:5000, steps:['Gerar QR Code','Aguardar leitura','Banco verificando','PIX aprovado!'] },
+  cartao:   { title:'Processando NFC...', dur:4000, steps:['Ler cartão','Comunicar operadora','Autorizando','Aprovado!'] },
+  boleto:   { title:'Gerando boleto...', dur:7000, steps:['Gerar código','Enviar por e-mail','Aguardar compensação','Confirmado!'] },
+  tag:      { title:'Lendo TAG Sem Parar...', dur:3000, steps:['Detectar TAG','Verificar conta','Aprovado!'] }
+};
+
+function startProcessing() {
+  if (!_payMethod) return;
+  showScreen('sc-proc');
+  var meta = _payMeta[_payMethod];
+
+  // Anim
+  var area = document.getElementById('anim-area');
+  area.innerHTML = '';
+  if (_payMethod === 'pix') {
+    area.innerHTML = '<div style="text-align:center"><div class="pix-qr-box">📱</div><div class="pix-scan"></div></div>';
+  } else if (_payMethod === 'cartao') {
+    area.innerHTML = '<div class="card3d-scene"><div class="card3d"><div class="chip-sm"></div><div style="font-size:.78rem;letter-spacing:.2em;opacity:.75;font-family:monospace">**** **** **** 4521</div><div class="nfc-wrap"><div class="nfc-r"></div><div class="nfc-r"></div></div></div></div>';
+  } else if (_payMethod === 'tag') {
+    area.innerHTML = '<div class="tag-box"><div class="tag-w"></div><div class="tag-w"></div><div class="tag-w"></div><svg width="80" height="48" viewBox="0 0 80 48" style="position:relative;z-index:1"><rect x="4" y="12" width="72" height="20" rx="5" fill="var(--ve)"/><rect x="16" y="5" width="40" height="16" rx="5" fill="#0d6b40"/><circle cx="20" cy="32" r="6" fill="#111"/><circle cx="60" cy="32" r="6" fill="#111"/></svg></div>';
+  } else if (_payMethod === 'boleto') {
+    area.innerHTML = '<div class="bol-bars" id="bol-bars"></div>';
+    setTimeout(function() {
+      var c = document.getElementById('bol-bars');
+      if (!c) return;
+      [14,7,22,5,16,8,11,20,6,18,9,14,7,22,11,6,15,9,19].forEach(function(h,i) {
+        var b = document.createElement('div'); b.className='bb';
+        b.style.cssText = 'width:'+(i%3===0?4:2)+'px;height:'+h+'px;animation-delay:'+(i*.04)+'s';
+        c.appendChild(b);
+      });
+    }, 80);
+  } else {
+    area.innerHTML = '<div class="proc-spinner"></div>';
+  }
+
+  // Title / sub
+  document.getElementById('proc-title').textContent = meta.title;
+  document.getElementById('proc-sub').textContent = 'Aguarde enquanto processamos seu pagamento';
+
+  // Steps
+  var stepsEl = document.getElementById('proc-steps');
+  stepsEl.innerHTML = meta.steps.map(function(s,i) {
+    return '<div class="ps-row '+(i===0?'cur':'')+'" id="psr'+i+'"><div class="ps-dot"></div>'+s+'</div>';
+  }).join('');
+
+  // Progress bar
+  var pbar = document.getElementById('pbar');
+  pbar.style.transition = 'none'; pbar.style.width = '0%';
+  setTimeout(function() { pbar.style.transition = 'width '+meta.dur+'ms linear'; pbar.style.width = '100%'; }, 60);
+
+  // Step cycle
+  var total = meta.steps.length;
+  var interval = meta.dur / total;
+  var cur = 0;
+  var iv = setInterval(function() {
+    var prev = document.getElementById('psr'+cur);
+    if (prev) { prev.classList.remove('cur'); prev.classList.add('done'); }
+    cur++;
+    if (cur < total) {
+      var next = document.getElementById('psr'+cur);
+      if (next) next.classList.add('cur');
+    } else {
+      clearInterval(iv);
+    }
+  }, interval);
+
+  // Advance after delay
+  setTimeout(function() { showScreen('sc-connect'); iniciarDeteccaoBateria(); }, meta.dur + 400);
+}
+
+// ===================== TARIFA / BANDEIRA =====================
+function calcularTarifa(bandeira, noturno) {
+  var tarifa = TARIFA_BASE;
+  if (bandeira === 'VERDE') tarifa += TARIFA_VERDE;
+  else if (bandeira === 'AMARELA') tarifa += TARIFA_AMARELA;
+  else if (bandeira === 'VERMELHA') tarifa += TARIFA_VERMELHA;
+  if (noturno) tarifa -= DESCONTO_NOTURNO;
+  return tarifa;
+}
+function emojiBandeira(b) {
+  if (b === 'VERDE') return '🟢';
+  if (b === 'AMARELA') return '🟡';
+  if (b === 'VERMELHA') return '🔴';
+  return '⚪';
+}
+function classeBandeira(b) {
+  if (b === 'VERDE') return 'green';
+  if (b === 'AMARELA') return 'amber';
+  if (b === 'VERMELHA') return 'red';
+  return '';
+}
+function capitalizar(s) { return s ? s.charAt(0) + s.slice(1).toLowerCase() : s; }
+
+// ===================== ESTAÇÃO (ESP32) =====================
+function buscarEstacao() {
+  var statusEl = document.getElementById('estacao-status-txt');
+  var espStatusEl = document.getElementById('esp-status-line');
+  if (!ESP32) {
+    if (statusEl) statusEl.textContent = '⚙️ Configure o IP da estação (botão no canto)';
+    if (espStatusEl) espStatusEl.textContent = 'Nenhum IP configurado ainda.';
+    return;
+  }
+  fetch(ESP32 + '/dados').then(function(r) {
+    if (!r.ok) throw new Error('offline');
+    return r.json();
+  }).then(function(dados) {
+    dadosEstacao = dados;
+    atualizarPainelEstacao();
+    if (sessaoIniciada) registrarPontoSessao();
+    if (espStatusEl) espStatusEl.textContent = '✅ Conectado a ' + ESP32.replace(/^https?:\/\//i, '');
+  }).catch(function() {
+    if (statusEl) statusEl.textContent = '❌ Estação Lumos desconectada';
+    if (espStatusEl) espStatusEl.textContent = '❌ Não foi possível conectar. Verifique o IP e se o dispositivo está na mesma rede Wi-Fi do ESP32.';
+  });
+}
+
+function informarRecargaESP32(ligar) {
+  if (!ESP32) return;
+  fetch(ESP32 + (ligar ? '/recarga/on' : '/recarga/off')).catch(function() {});
+}
+
+function atualizarPainelEstacao() {
+  if (!dadosEstacao) return;
+  var elSolar = document.getElementById('est-solar');
+  var elLynx = document.getElementById('est-lynx');
+  var elNoturno = document.getElementById('est-noturno');
+  var elStatus = document.getElementById('estacao-status-txt');
+  if (elSolar) elSolar.textContent = dadosEstacao.solar + '%';
+  if (elLynx) elLynx.textContent = dadosEstacao.lynx + '%';
+  if (elNoturno) elNoturno.textContent = dadosEstacao.noturno ? 'ATIVO' : 'INATIVO';
+  if (elStatus) elStatus.textContent = dadosEstacao.recarga ? '🔵 Estação em recarga' : '⚪ Estação aguardando recarga';
+
+  var tarifa = calcularTarifa(dadosEstacao.bandeira, dadosEstacao.noturno);
+  var elTar = document.getElementById('sp-tarifa');
+  if (elTar) elTar.textContent = 'R$ ' + tarifa.toFixed(2).replace('.', ',') + '/kWh';
+
+  var elBandeira = document.getElementById('sp-bandeira');
+  if (elBandeira) {
+    elBandeira.textContent = emojiBandeira(dadosEstacao.bandeira) + ' ' + capitalizar(dadosEstacao.bandeira);
+    elBandeira.className = 'sv ' + classeBandeira(dadosEstacao.bandeira);
+  }
+  var elBadge = document.getElementById('ct-badge');
+  if (elBadge) {
+    elBadge.textContent = emojiBandeira(dadosEstacao.bandeira) + ' Bandeira ' + capitalizar(dadosEstacao.bandeira) + (dadosEstacao.noturno ? ' · Noturno 🌙' : ' · Solar');
+  }
+}
+
+// ===================== STEP 3: CONECTAR (Battery API real) =====================
+function iniciarDeteccaoBateria() {
+  var badge = document.getElementById('conn-badge');
+  var msg = document.getElementById('conn-msg');
+
+  if (!('getBattery' in navigator)) {
+    modoFallback = true;
+    msg.textContent = 'Este navegador não permite acessar a bateria do celular. Toque no botão abaixo para simular a conexão.';
+    msg.classList.add('conn-msg-warn');
+    return;
+  }
+
+  navigator.getBattery().then(function(bm) {
+    batteryManager = bm;
+    bateriaSuportada = true;
+    percentualAtual = Math.round(bm.level * 100);
+
+    bm.addEventListener('levelchange', onBatteryChange);
+    bm.addEventListener('chargingchange', onBatteryChargingChange);
+    bm.addEventListener('chargingtimechange', atualizarTimer);
+
+    if (bm.charging) {
+      confirmarConexao();
+    } else {
+      badge.innerHTML = '<div class="badge-dot"></div>Conecte o cabo do carregador ao celular...';
+    }
+  }).catch(function() {
+    modoFallback = true;
+    msg.textContent = 'Não foi possível acessar a bateria do celular. Toque no botão abaixo para simular a conexão.';
+    msg.classList.add('conn-msg-warn');
+  });
+}
+
+function onBatteryChargingChange() {
+  if (!batteryManager) return;
+  if (batteryManager.charging && !sessaoIniciada && document.getElementById('sc-connect').classList.contains('active')) {
+    confirmarConexao();
+  }
+  if (!batteryManager.charging && sessaoIniciada) {
+    addLog('amber', '['+timeStr()+'] ⚠ Cabo desconectado do celular');
+    finalizarSessao();
+  }
+}
+
+function onBatteryChange() {
+  if (!batteryManager) return;
+  percentualAtual = Math.round(batteryManager.level * 100);
+  if (sessaoIniciada) atualizarProgresso();
+}
+
+function confirmarConexao() {
+  var badge = document.getElementById('conn-badge');
+  var plug = document.getElementById('plug-icon');
+  var msg = document.getElementById('conn-msg');
+  badge.className = 'conn-badge ok';
+  badge.innerHTML = '<div class="badge-dot"></div>Veículo conectado!';
+  plug.textContent = '⚡';
+  msg.textContent = 'Cabo detectado com sucesso. Iniciando sessão de recarga real...';
+  setTimeout(startCharge, 1200);
+}
+
+// Botão manual: força o início mesmo sem detecção automática (ou sem Battery API)
+function simulateConnect() {
+  confirmarConexao();
+}
+
+// ===================== STEP 4: CARREGAMENTO (dados reais) =====================
+function startCharge() {
+  showScreen('sc-charge');
+  sessaoIniciada = true;
+  horarioInicio = new Date();
+  percentualInicial = bateriaSuportada ? percentualAtual : (Math.floor(Math.random() * 30) + 15);
+  percentualAtual = percentualInicial;
+  ultimoPctRegistrado = percentualInicial;
+
+  historicoSessao = [{
+    timestamp: horarioInicio.getTime(),
+    pct: percentualInicial,
+    bandeira: dadosEstacao ? dadosEstacao.bandeira : 'VERDE',
+    noturno: dadosEstacao ? dadosEstacao.noturno : false
+  }];
+  chargeKwhTotal = 0;
+  custoTotalSessao = 0;
+
+  var veiculo = (_user && _user.veiculo) ? _user.veiculo : 'BYD Dolphin';
+  var token   = (_user && _user.token)   ? _user.token   : '------';
+  capacidadeVeiculo = CAPACIDADES_VEICULO[veiculo] || 45;
+
+  document.getElementById('sp-veiculo').textContent = veiculo;
+  document.getElementById('sp-ini').textContent     = percentualInicial + '%';
+  document.getElementById('sp-inicio').textContent  = horarioInicio.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('g-pct').textContent      = percentualInicial + '%';
+
+  informarRecargaESP32(true);
+
+  addLog('green', '['+timeStr()+'] ✓ Sessão real iniciada · Token: '+token);
+  addLog('', '['+timeStr()+'] Veículo: '+veiculo+' ('+capacidadeVeiculo+' kWh) · Bat. inicial (proxy do celular): '+percentualInicial+'%');
+  if (!bateriaSuportada) addLog('amber', '['+timeStr()+'] ⚠ Modo simulado: Battery API indisponível neste navegador');
+
+  atualizarProgresso();
+
+  _timerInterval = setInterval(atualizarTimer, 1000);
+  atualizarTimer();
+
+  // Sem Battery API: incrementa a % artificialmente para a demo continuar
+  if (!bateriaSuportada) {
+    _fbInterval = setInterval(function() {
+      percentualAtual = Math.min(100, percentualAtual + 1);
+      atualizarProgresso();
+    }, 3000);
+  }
+}
+
+function registrarPontoSessao() {
+  if (!sessaoIniciada || percentualAtual === null) return;
+  var ultimo = historicoSessao[historicoSessao.length - 1];
+  var bandeiraAtual = dadosEstacao ? dadosEstacao.bandeira : 'VERDE';
+  var noturnoAtual = dadosEstacao ? dadosEstacao.noturno : false;
+
+  if (!ultimo || ultimo.bandeira !== bandeiraAtual || ultimo.noturno !== noturnoAtual) {
+    historicoSessao.push({ timestamp: Date.now(), pct: percentualAtual, bandeira: bandeiraAtual, noturno: noturnoAtual });
+    addLog(classeBandeira(bandeiraAtual) === 'red' ? 'amber' : classeBandeira(bandeiraAtual),
+      '['+timeStr()+'] '+emojiBandeira(bandeiraAtual)+' Bandeira mudou para '+capitalizar(bandeiraAtual)+(noturnoAtual ? ' 🌙' : ''));
+  }
+  recalcularSessao();
+}
+
+function atualizarProgresso() {
+  if (percentualAtual === null) return;
+
+  if (percentualAtual !== ultimoPctRegistrado) {
+    historicoSessao.push({
+      timestamp: Date.now(),
+      pct: percentualAtual,
+      bandeira: dadosEstacao ? dadosEstacao.bandeira : 'VERDE',
+      noturno: dadosEstacao ? dadosEstacao.noturno : false
+    });
+    ultimoPctRegistrado = percentualAtual;
+    recalcularSessao();
+    addLog('', '['+timeStr()+'] '+chargeKwhTotal.toFixed(2).replace('.', ',')+' kWh · '+percentualAtual+'% · R$'+custoTotalSessao.toFixed(2).replace('.', ','));
+  } else {
+    recalcularSessao();
+  }
+
+  if (percentualAtual >= 100) {
+    addLog('green', '['+timeStr()+'] ✓ Bateria em 100% — recarga concluída!');
+    setTimeout(finalizarSessao, 1000);
+  }
+}
+
+function recalcularSessao() {
+  var kwhTotal = 0;
+  var custoTotal = 0;
+
+  for (var i = 1; i < historicoSessao.length; i++) {
+    var ant = historicoSessao[i - 1];
+    var atual = historicoSessao[i];
+    var diffPct = atual.pct - ant.pct;
+    if (diffPct <= 0) continue;
+
+    // Usa a bandeira registrada no momento da medição (não a última da sessão)
+    var bandeira = atual.bandeira || ant.bandeira || 'VERDE';
+    var noturno = atual.noturno !== undefined ? atual.noturno : false;
+    var energia = capacidadeVeiculo * (diffPct / 100);
+    var tarifa = calcularTarifa(bandeira, noturno);
+
+    kwhTotal += energia;
+    custoTotal += energia * tarifa;
+  }
+
+  chargeKwhTotal = kwhTotal;
+  custoTotalSessao = custoTotal;
+
+  var pctProgresso = percentualInicial < 100
+    ? Math.max(0, Math.min(1, (percentualAtual - percentualInicial) / (100 - percentualInicial)))
+    : 1;
+  var CIRC = 553;
+
+  document.getElementById('g-fill').style.strokeDashoffset = CIRC - (CIRC * pctProgresso);
+  document.getElementById('g-pct').textContent = percentualAtual + '%';
+  document.getElementById('g-kwh').textContent = kwhTotal.toFixed(2).replace('.', ',') + ' kWh adicionados';
+  document.getElementById('sp-cur').textContent = percentualAtual + '%';
+  document.getElementById('sp-custo').textContent = 'R$ ' + custoTotal.toFixed(2).replace('.', ',');
+  document.getElementById('sp-co2').textContent = (kwhTotal * CO2_POR_KWH).toFixed(2).replace('.', ',') + ' kg';
+
+  atualizarPainelEstacao();
+}
+
+function atualizarTimer() {
+  var el = document.getElementById('g-timer');
+  if (!el) return;
+
+  if (bateriaSuportada && batteryManager && Number.isFinite(batteryManager.chargingTime) &&
+      batteryManager.chargingTime !== Infinity && batteryManager.chargingTime > 0) {
+    var minutosAPI = Math.ceil(batteryManager.chargingTime / 60);
+    var minutosMax = minutosAPI + MARGEM_MINUTOS;
+    el.textContent = minutosAPI + '–' + minutosMax + ' min';
+  } else if (!bateriaSuportada) {
+    el.textContent = 'estimativa indisponível';
+  } else {
+    el.textContent = 'calculando...';
+  }
+}
+
+// ===================== STEP 5: CONCLUÍDO =====================
+function finalizarSessao() {
+  if (!sessaoIniciada) return;
+  sessaoIniciada = false;
+  clearInterval(_timerInterval);
+  clearInterval(_fbInterval);
+
+  if (batteryManager) {
+    batteryManager.removeEventListener('levelchange', onBatteryChange);
+    batteryManager.removeEventListener('chargingtimechange', atualizarTimer);
+  }
+  informarRecargaESP32(false);
+
+  var duracaoMin = horarioInicio ? Math.max(0, Math.round((Date.now() - horarioInicio.getTime()) / 60000)) : 0;
+  var custo = custoTotalSessao.toFixed(2);
+  var co2   = (chargeKwhTotal * CO2_POR_KWH).toFixed(2);
+
+  document.getElementById('ds-kwh').textContent   = chargeKwhTotal.toFixed(2).replace('.', ',');
+  document.getElementById('ds-time').textContent  = duracaoMin + ' min';
+  document.getElementById('ds-custo').textContent = 'R$ ' + custo.replace('.', ',');
+  document.getElementById('ds-co2').textContent   = co2.replace('.', ',') + ' kg';
+  showScreen('sc-done');
+
+  // Bandeira predominante da sessão (ou "Mista" se houve variação)
+  var bandeirasUnicas = {};
+  historicoSessao.forEach(function(p) { bandeirasUnicas[p.bandeira] = true; });
+  var chaves = Object.keys(bandeirasUnicas);
+  var bandeiraLabel = chaves.length > 1 ? 'Mista' : capitalizar(chaves[0] || 'Verde');
+
+  // Salva sessão
+  var ss = [];
+  try { ss = JSON.parse(localStorage.getItem('lm_sessions')) || []; } catch(e) {}
+  var now = new Date();
+  ss.unshift({
+    id: 'S'+String(ss.length+1).padStart(3,'0'),
+    data: now.toLocaleDateString('pt-BR'),
+    hora: now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    veiculo: (_user && _user.veiculo) ? _user.veiculo : 'BYD Dolphin',
+    fonte: 'Solar + Lynx', kwh: chargeKwhTotal.toFixed(2),
+    durMin: duracaoMin, valor: parseFloat(custo),
+    bandeira: bandeiraLabel, status: 'ok', co2: parseFloat(co2)
+  });
+  localStorage.setItem('lm_sessions', JSON.stringify(ss.slice(0,30)));
+
+  if (_payMethod === 'creditos') {
+    var cr = parseFloat(localStorage.getItem('lm_credits') || '0');
+    localStorage.setItem('lm_credits', Math.max(0, cr - parseFloat(custo)).toFixed(2));
+  }
+
+  // Confetti
+  var layer = document.createElement('div'); layer.className = 'conf-layer';
+  document.body.appendChild(layer);
+  var cols = ['#3ecf74','#d4f5e2','#fbbf24','#fff','#1a9e50'];
+  for (var i = 0; i < 60; i++) {
+    var p = document.createElement('div'); p.className = 'cp';
+    var c = cols[Math.floor(Math.random() * cols.length)];
+    p.style.cssText = 'background:'+c+';left:'+Math.random()*100+'%;top:0;width:'+(6+Math.random()*6)+'px;height:'+(6+Math.random()*6)+'px;border-radius:'+(Math.random()>.5?'50%':'2px')+';--d:'+(1.5+Math.random())+'s;--del:'+(Math.random()*1.2)+'s';
+    layer.appendChild(p);
+  }
+  setTimeout(function() { if (layer.parentNode) layer.parentNode.removeChild(layer); }, 4000);
+}
+
+// ===================== POLLING DA ESTAÇÃO =====================
+carregarIpEsp32();
+setInterval(buscarEstacao, 5000);
+buscarEstacao();
+</script>
+</body>
+</html>
